@@ -1,4 +1,7 @@
-import os
+from pytgcalls import PyTgCalls
+from pytgcalls.types.input_stream import AudioVideoPiped
+from pytgcalls.types.input_stream.quality import HighQualityVideo
+from pytgcalls import idleimport os
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
