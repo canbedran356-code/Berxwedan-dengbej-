@@ -3,5 +3,5 @@ tgcrypto
 yt-dlp
 python-dotenv
 
-pytgcalls==2.2.12
-ntgcalls==2.2.7
+pytgcalls==2.1.0
+ntgcalls==0.0.6
