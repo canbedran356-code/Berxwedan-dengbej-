@@ -1,6 +1,7 @@
 pyrogram==2.0.106
-pytgcalls==2.1.0
-ntgcalls==1.3.0
+tgcrypto
 yt-dlp
 python-dotenv
-tgcrypto
+
+git+https://github.com/pytgcalls/pytgcalls.git
+git+https://github.com/pytgcalls/ntgcalls.git
