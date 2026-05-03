@@ -1,100 +1,82 @@
 import os
 import asyncio
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pytgcalls import PyTgCalls, idle
-from pytgcalls.types.input_stream import AudioVideoPiped
-from pytgcalls.types.input_stream.quality import HighQualityVideo
-import yt_dlp
+from pytgcalls import PyTgCalls
+from pytgcalls.types.input_stream import AudioPiped
+from yt_dlp import YoutubeDL
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-app = Client("bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client("music-bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 call = PyTgCalls(app)
 
-# YOUTUBE SEARCH
-def yt_search(query):
-    ydl_opts = {"format": "best[ext=mp4]/best"}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+QUEUE = {}
+
+# 🎶 YOUTUBE SES ÇEKME
+def get_audio(query):
+    ydl_opts = {
+        "format": "bestaudio",
+        "quiet": True
+    }
+    with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(f"ytsearch:{query}", download=False)["entries"][0]
-        return info["url"], info["title"]
+        return info["url"]
 
-# PLAY
-@app.on_message(filters.command("play"))
-async def play(_, msg):
-    chat_id = msg.chat.id
+# ▶️ PLAY
+@app.on_message(filters.command("play") & filters.group)
+async def play(_, message):
+    chat_id = message.chat.id
 
-    if len(msg.command) < 2:
-        return await msg.reply("❌ Şarkı adı yaz")
+    if len(message.command) < 2:
+        return await message.reply("❗ Şarkı adı yaz")
 
-    query = msg.text.split(None, 1)[1]
-    url, title = yt_search(query)
+    query = " ".join(message.command[1:])
+    url = get_audio(query)
 
-    try:
-        await call.join_group_call(
-            chat_id,
-            AudioVideoPiped(
-                url,
-                video_parameters=HighQualityVideo(),
-            ),
-        )
-    except:
-        await call.change_stream(
-            chat_id,
-            AudioVideoPiped(
-                url,
-                video_parameters=HighQualityVideo(),
-            ),
-        )
-
-    buttons = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton("⏸ Pause", callback_data="pause"),
-                InlineKeyboardButton("▶️ Resume", callback_data="resume"),
-            ],
-            [
-                InlineKeyboardButton("⏭ Skip", callback_data="skip"),
-                InlineKeyboardButton("⏹ Stop", callback_data="stop"),
-            ],
-        ]
+    await call.join_group_call(
+        chat_id,
+        AudioPiped(url)
     )
 
-    await msg.reply(f"🎶 Oynatılıyor: {title}", reply_markup=buttons)
+    await message.reply(f"🎶 Çalıyor: {query}")
 
-# BUTTONS
-@app.on_callback_query()
-async def cb(_, q):
-    chat_id = q.message.chat.id
+# ⏸ PAUSE
+@app.on_message(filters.command("pause") & filters.group)
+async def pause(_, message):
+    await call.pause_stream(message.chat.id)
+    await message.reply("⏸ Duraklatıldı")
 
-    if q.data == "pause":
-        await call.pause_stream(chat_id)
-        await q.answer("Duraklatıldı")
+# ▶️ RESUME
+@app.on_message(filters.command("resume") & filters.group)
+async def resume(_, message):
+    await call.resume_stream(message.chat.id)
+    await message.reply("▶️ Devam ediyor")
 
-    elif q.data == "resume":
-        await call.resume_stream(chat_id)
-        await q.answer("Devam ediyor")
+# ⏭ SKIP
+@app.on_message(filters.command("skip") & filters.group)
+async def skip(_, message):
+    await call.leave_group_call(message.chat.id)
+    await message.reply("⏭ Geçildi")
 
-    elif q.data == "stop":
-        await call.leave_group_call(chat_id)
-        await q.answer("Durduruldu")
+# ❌ LEAVE
+@app.on_message(filters.command("leave") & filters.group)
+async def leave(_, message):
+    await call.leave_group_call(message.chat.id)
+    await message.reply("👋 Çıktım")
 
-    elif q.data == "skip":
-        await call.leave_group_call(chat_id)
-        await q.answer("Geçildi")
-
-# TEST
+# 🧪 TEST
 @app.on_message(filters.command("test"))
-async def test(_, msg):
-    await msg.reply("Bot çalışıyor ✅")
+async def test(_, message):
+    await message.reply("✅ Bot çalışıyor")
 
 # START
 async def main():
     await app.start()
     await call.start()
-    print("Bot çalışıyor 🔥")
+    print("Bot çalışıyor 🚀")
     await idle()
 
-asyncio.run(main())
+from pyrogram import idle
+asyncio.get_event_loop().run_until_complete(main())
