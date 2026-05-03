@@ -1,15 +1,13 @@
-from pytgcalls import PyTgCalls
-from pytgcalls.types.input_stream import AudioVideoPiped
-from pytgcalls.types.input_stream.quality import HighQualityVideo
-from pytgcalls import idleimport os
+import os
 import asyncio
+import yt_dlp
+
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pytgcalls import PyTgCalls
+
+from pytgcalls import PyTgCalls, idle
 from pytgcalls.types.input_stream import AudioVideoPiped
 from pytgcalls.types.input_stream.quality import HighQualityVideo
-from pytgcalls import idle
-import yt_dlp
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
@@ -18,8 +16,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 app = Client("bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 call = PyTgCalls(app)
 
-QUEUE = {}
-
+# YouTube search
 def yt_search(query):
     ydl_opts = {"format": "best"}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -29,6 +26,9 @@ def yt_search(query):
 # PLAY
 @app.on_message(filters.command("play"))
 async def play(_, msg):
+    if len(msg.command) < 2:
+        return await msg.reply("❗ Kullanım: /play şarkı adı")
+
     chat_id = msg.chat.id
     query = msg.text.split(None, 1)[1]
 
@@ -55,28 +55,32 @@ async def play(_, msg):
         ]
     )
 
-    await msg.reply(f"🎶 Oynatılıyor: {title}", reply_markup=buttons)
+    await msg.reply(f"🎶 Oynatılıyor:\n{title}", reply_markup=buttons)
 
 # BUTTONS
 @app.on_callback_query()
 async def cb(_, q):
     chat_id = q.message.chat.id
 
-    if q.data == "pause":
-        await call.pause_stream(chat_id)
-        await q.answer("Duraklatıldı")
+    try:
+        if q.data == "pause":
+            await call.pause_stream(chat_id)
+            await q.answer("Duraklatıldı")
 
-    elif q.data == "resume":
-        await call.resume_stream(chat_id)
-        await q.answer("Devam ediyor")
+        elif q.data == "resume":
+            await call.resume_stream(chat_id)
+            await q.answer("Devam ediyor")
 
-    elif q.data == "stop":
-        await call.leave_group_call(chat_id)
-        await q.answer("Durduruldu")
+        elif q.data == "stop":
+            await call.leave_group_call(chat_id)
+            await q.answer("Durduruldu")
 
-    elif q.data == "skip":
-        await call.leave_group_call(chat_id)
-        await q.answer("Geçildi")
+        elif q.data == "skip":
+            await call.leave_group_call(chat_id)
+            await q.answer("Geçildi")
+
+    except Exception as e:
+        await q.answer(f"Hata: {e}", show_alert=True)
 
 # START
 async def main():
