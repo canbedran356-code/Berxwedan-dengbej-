@@ -3,7 +3,8 @@ import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytgcalls import PyTgCalls, idle
-from pytgcalls.types import AudioPiped
+from pytgcalls.types.input_stream import AudioVideoPiped
+from pytgcalls.types.input_stream.quality import HighQualityVideo
 import yt_dlp
 
 API_ID = int(os.getenv("API_ID"))
@@ -13,11 +14,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 app = Client("bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 call = PyTgCalls(app)
 
-QUEUE = {}
-
 # YOUTUBE SEARCH
 def yt_search(query):
-    ydl_opts = {"format": "bestaudio"}
+    ydl_opts = {"format": "best[ext=mp4]/best"}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(f"ytsearch:{query}", download=False)["entries"][0]
         return info["url"], info["title"]
@@ -36,10 +35,19 @@ async def play(_, msg):
     try:
         await call.join_group_call(
             chat_id,
-            AudioPiped(url),
+            AudioVideoPiped(
+                url,
+                video_parameters=HighQualityVideo(),
+            ),
         )
     except:
-        await call.change_stream(chat_id, AudioPiped(url))
+        await call.change_stream(
+            chat_id,
+            AudioVideoPiped(
+                url,
+                video_parameters=HighQualityVideo(),
+            ),
+        )
 
     buttons = InlineKeyboardMarkup(
         [
